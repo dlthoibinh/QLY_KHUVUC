@@ -11,16 +11,16 @@
 
   <title>QUẢN LÝ KHU VỰC</title>
 
-  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="manifest" href="./manifest.webmanifest?v=13">
   <link rel="apple-touch-icon" href="./evn_logo.png">
   <link rel="icon" href="./evn_logo.png">
   <link rel="canonical" href="https://dlthoibinh.github.io/QLY_KHUVUC/">
 
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self';
-                 frame-src https://script.google.com https://script.googleusercontent.com https://*.googleusercontent.com;
-                 child-src https://script.google.com https://script.googleusercontent.com https://*.googleusercontent.com;
-                 connect-src 'self' https://script.google.com https://script.googleusercontent.com https://*.googleusercontent.com;
+                 frame-src https://*.google.com https://*.googleusercontent.com;
+                 child-src https://*.google.com https://*.googleusercontent.com;
+                 connect-src 'self' https://*.google.com https://*.googleusercontent.com;
                  img-src 'self' data: blob: https:;
                  style-src 'self' 'unsafe-inline';
                  script-src 'self' 'unsafe-inline';
@@ -79,17 +79,17 @@
     #qlkvFrame {
       position: absolute;
       inset: 0;
+      z-index: 1;
       display: block;
       width: 100%;
       height: 100%;
       border: 0;
       background: #fff;
-      opacity: 0;
-      transition: opacity .18s ease;
+      visibility: hidden;
     }
 
     #qlkvFrame.ready {
-      opacity: 1;
+      visibility: visible;
     }
 
     .screen {
@@ -109,16 +109,14 @@
         linear-gradient(180deg, #f8fcff, #eef7ff);
     }
 
-    .screen.show {
-      display: flex;
-    }
+    .screen.show { display: flex; }
 
     .card {
       width: min(440px, 100%);
       padding: 26px 22px;
       border: 1px solid rgba(14,165,233,.18);
       border-radius: 26px;
-      background: rgba(255,255,255,.96);
+      background: rgba(255,255,255,.97);
       box-shadow: 0 24px 70px rgba(15,23,42,.16);
       text-align: center;
     }
@@ -197,14 +195,12 @@
       color: #94a3b8;
       font-size: 12px;
       line-height: 1.45;
+      word-break: break-word;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (prefers-reduced-motion: reduce) {
-      #qlkvFrame { transition: none; }
       .spinner { animation-duration: 1.8s; }
     }
   </style>
@@ -224,8 +220,13 @@
       <div class="card">
         <img class="logo" src="./evn_logo.png" alt="EVN">
         <h1>QUẢN LÝ KHU VỰC</h1>
-        <p>Đang kết nối hệ thống...</p>
+        <p id="loadingText">Đang kết nối hệ thống...</p>
         <div class="spinner" aria-hidden="true"></div>
+        <div id="slowActions" class="actions" hidden>
+          <button class="primary" type="button" id="retryFrame">Tải lại ứng dụng</button>
+          <a class="button-link secondary" id="openDirect" href="https://script.google.com/macros/s/AKfycbwIjlt_hIXaD9chA1Xl63ErUKo54i4mB7NXTgB5BwMf0JpM5jic-Ah5OX5yP57fsD_h/exec">Mở trực tiếp để kiểm tra</a>
+        </div>
+        <div id="deploymentInfo" class="small"></div>
       </div>
     </section>
 
@@ -239,127 +240,189 @@
         </div>
       </div>
     </section>
-
-    <section id="blockedScreen" class="screen" aria-live="assertive">
-      <div class="card">
-        <img class="logo" src="./evn_logo.png" alt="EVN">
-        <h1>Không thể nhúng Web App</h1>
-        <p>
-          Google Apps Script đang chặn chạy trong khung. Hãy cập nhật Deployment
-          thành <b>Execute as: Me</b>, <b>Who has access: Anyone</b> và triển khai
-          phiên bản có <b>XFrameOptionsMode.ALLOWALL</b>.
-        </p>
-        <div class="actions">
-          <button class="primary" type="button" id="retryFrame">Tải lại ứng dụng</button>
-          <a class="button-link secondary" id="openDirect" href="https://script.google.com/macros/s/AKfycbwIjlt_hIXaD9chA1Xl63ErUKo54i4mB7NXTgB5BwMf0JpM5jic-Ah5OX5yP57fsD_h/exec">Mở trực tiếp để kiểm tra</a>
-        </div>
-        <div class="small">
-          Khi “Mở trực tiếp” chạy được nhưng màn hình này vẫn xuất hiện,
-          nguyên nhân là Deployment hiện tại chưa cho phép iframe hoặc điện thoại còn cache bản cũ.
-        </div>
-      </div>
-    </section>
   </main>
 
   <script>
     (() => {
       'use strict';
 
-      const GAS_URL = 'https://script.google.com/macros/s/AKfycbwIjlt_hIXaD9chA1Xl63ErUKo54i4mB7NXTgB5BwMf0JpM5jic-Ah5OX5yP57fsD_h/exec';
-      const APP_BUILD = 'QLKV-PWA-2026.07.09-v12';
-      const READY_TIMEOUT_MS = 15000;
+      const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwIjlt_hIXaD9chA1Xl63ErUKo54i4mB7NXTgB5BwMf0JpM5jic-Ah5OX5yP57fsD_h/exec';
+      const APP_BUILD = 'QLKV-PWA-2026.07.09-v13';
+      const SLOW_NOTICE_MS = 18000;
+      const LOAD_FALLBACK_MS = 5500;
 
       const frame = document.getElementById('qlkvFrame');
       const loadingScreen = document.getElementById('loadingScreen');
       const offlineScreen = document.getElementById('offlineScreen');
-      const blockedScreen = document.getElementById('blockedScreen');
+      const loadingText = document.getElementById('loadingText');
+      const slowActions = document.getElementById('slowActions');
+      const deploymentInfo = document.getElementById('deploymentInfo');
       const openDirect = document.getElementById('openDirect');
 
       let ready = false;
-      let watchdog = 0;
+      let bridge = '';
+      let gasUrl = '';
+      let slowTimer = 0;
+      let fallbackTimer = 0;
+
+      function validGasUrl(value) {
+        try {
+          const url = new URL(value);
+          return url.protocol === 'https:' &&
+                 url.hostname === 'script.google.com' &&
+                 /^\/macros\/s\/[^/]+\/exec$/.test(url.pathname);
+        } catch (_) {
+          return false;
+        }
+      }
+
+      function resolveGasUrl() {
+        const params = new URLSearchParams(location.search);
+        const supplied = params.get('gas_url') || params.get('gas');
+
+        if (supplied && validGasUrl(supplied)) {
+          localStorage.setItem('QLKV_GAS_URL', supplied);
+          params.delete('gas_url');
+          params.delete('gas');
+
+          const clean = location.pathname +
+            (params.toString() ? '?' + params.toString() : '') +
+            location.hash;
+          history.replaceState(null, '', clean);
+        }
+
+        const saved = localStorage.getItem('QLKV_GAS_URL');
+        return validGasUrl(saved) ? saved : DEFAULT_GAS_URL;
+      }
+
+      function createBridgeToken() {
+        if (window.crypto && typeof crypto.randomUUID === 'function') {
+          return crypto.randomUUID();
+        }
+
+        const bytes = new Uint8Array(16);
+        if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes);
+        return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('') +
+               '-' + Date.now().toString(36);
+      }
 
       function showOnly(target) {
-        [loadingScreen, offlineScreen, blockedScreen].forEach(el => {
+        [loadingScreen, offlineScreen].forEach(el => {
           el.classList.toggle('show', el === target);
         });
       }
 
+      function deploymentId(urlValue) {
+        const match = String(urlValue).match(/\/macros\/s\/([^/]+)\/exec/);
+        return match ? match[1] : '';
+      }
+
       function makeFrameUrl() {
-        const url = new URL(GAS_URL);
+        const url = new URL(gasUrl);
         url.searchParams.set('embed', '1');
+        url.searchParams.set('bridge', bridge);
         url.searchParams.set('shell', APP_BUILD);
         url.searchParams.set('_ts', String(Date.now()));
         return url.toString();
       }
 
-      function armWatchdog() {
-        clearTimeout(watchdog);
-        watchdog = setTimeout(() => {
-          if (!ready && navigator.onLine) {
-            showOnly(blockedScreen);
-          }
-        }, READY_TIMEOUT_MS);
+      function clearTimers() {
+        clearTimeout(slowTimer);
+        clearTimeout(fallbackTimer);
+      }
+
+      function markReady(source) {
+        if (ready) return;
+        ready = true;
+        clearTimers();
+        frame.classList.add('ready');
+        showOnly(null);
+        console.info('[QLKV] ready:', source);
+      }
+
+      function startTimers() {
+        clearTimers();
+
+        slowTimer = setTimeout(() => {
+          if (ready || !navigator.onLine) return;
+          loadingText.textContent = 'Kết nối đang chậm. Có thể tải lại hoặc mở Web App trực tiếp để kiểm tra.';
+          slowActions.hidden = false;
+        }, SLOW_NOTICE_MS);
       }
 
       function loadApp() {
         ready = false;
+        clearTimers();
         frame.classList.remove('ready');
+        slowActions.hidden = true;
+        loadingText.textContent = 'Đang kết nối hệ thống...';
 
         if (!navigator.onLine) {
           showOnly(offlineScreen);
           return;
         }
 
+        gasUrl = resolveGasUrl();
+        bridge = createBridgeToken();
+
+        openDirect.href = gasUrl;
+        deploymentInfo.textContent = 'Deployment: ' + deploymentId(gasUrl);
+
         showOnly(loadingScreen);
         frame.src = makeFrameUrl();
-        openDirect.href = GAS_URL;
-        armWatchdog();
-      }
-
-      function markReady() {
-        if (ready) return;
-        ready = true;
-        clearTimeout(watchdog);
-        frame.classList.add('ready');
-        showOnly(null);
+        startTimers();
       }
 
       window.addEventListener('message', event => {
-        const allowed =
-          event.origin === 'https://script.google.com' ||
-          event.origin === 'https://script.googleusercontent.com' ||
-          event.origin.endsWith('.googleusercontent.com');
-
-        if (!allowed) return;
-
         const data = event.data || {};
-        if (data === 'QLKV_READY' || data.type === 'QLKV_READY') {
-          markReady();
+
+        // Không phụ thuộc origin vì Google Apps Script có thể chạy qua nhiều lớp iframe.
+        // Mã bridge ngẫu nhiên ngăn trang khác gửi tín hiệu giả.
+        if (data.type === 'QLKV_READY' && data.bridge === bridge) {
+          markReady('bridge');
         }
+      });
+
+      frame.addEventListener('load', () => {
+        // Apps Script có thể đặt nội dung người dùng trong iframe lồng, khiến
+        // postMessage không tới parent ở một số Android WebView. Khi tài liệu
+        // ngoài đã load xong, chờ thêm rồi mở giao diện thay vì báo chặn sai.
+        clearTimeout(fallbackTimer);
+        fallbackTimer = setTimeout(() => {
+          if (!ready && navigator.onLine) markReady('iframe-load-fallback');
+        }, LOAD_FALLBACK_MS);
       });
 
       window.addEventListener('online', loadApp);
       window.addEventListener('offline', () => {
         ready = false;
-        clearTimeout(watchdog);
+        clearTimers();
+        frame.classList.remove('ready');
         showOnly(offlineScreen);
       });
 
       document.getElementById('retryOffline').addEventListener('click', loadApp);
       document.getElementById('retryFrame').addEventListener('click', loadApp);
 
-      // Một số WebView không chuyển postMessage ổn định. Nếu iframe load và vẫn còn
-      // màn hình loading, tiếp tục chờ watchdog thay vì coi load là thành công giả.
-      frame.addEventListener('load', () => {
-        if (ready) return;
-      });
-
       if ('serviceWorker' in navigator) {
-        const swUrl = new URL('./sw.js', location.href);
+        const swUrl = new URL('./sw.js?v=13', location.href);
         navigator.serviceWorker
           .register(swUrl, { scope: './', updateViaCache: 'none' })
-          .then(registration => registration.update())
-          .catch(error => console.warn('Service Worker:', error));
+          .then(async registration => {
+            await registration.update();
+
+            if (registration.waiting) {
+              registration.waiting.postMessage('SKIP_WAITING');
+            }
+          })
+          .catch(error => console.warn('[QLKV] Service Worker:', error));
+
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!sessionStorage.getItem('QLKV_SW_RELOADED_V13')) {
+            sessionStorage.setItem('QLKV_SW_RELOADED_V13', '1');
+            location.reload();
+          }
+        });
       }
 
       loadApp();
