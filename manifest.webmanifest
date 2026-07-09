@@ -5,10 +5,13 @@
   "description": "Ứng dụng quản lý khu vực Điện lực Thới Bình",
   "lang": "vi",
   "dir": "ltr",
-  "start_url": "./index.html",
+  "start_url": "./index.html?v=13",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen"],
+  "display_override": [
+    "standalone",
+    "fullscreen"
+  ],
   "orientation": "any",
   "background_color": "#f6f7fb",
   "theme_color": "#0ea5e9",
