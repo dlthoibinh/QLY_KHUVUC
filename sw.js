@@ -1,11 +1,11 @@
 'use strict';
 
 const CACHE_PREFIX = 'qlkv-pwa-';
-const CACHE_NAME = CACHE_PREFIX + 'v12';
-const LEGACY_PREFIXES = ['crew-pwa-', 'qlkv-shell-'];
+const CACHE_NAME = CACHE_PREFIX + 'v13';
+const OLD_PREFIXES = ['crew-pwa-', 'qlkv-shell-', 'qlkv-pwa-v10', 'qlkv-pwa-v11', 'qlkv-pwa-v12'];
 
 const BASE_URL = new URL('./', self.location.href);
-const STATIC_FILES = [
+const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
@@ -16,25 +16,21 @@ const STATIC_FILES = [
   './icon-512-maskable.png'
 ].map(path => new URL(path, BASE_URL).toString());
 
-async function precacheSafely() {
-  const cache = await caches.open(CACHE_NAME);
-
-  await Promise.allSettled(
-    STATIC_FILES.map(async url => {
-      try {
-        const response = await fetch(url, { cache: 'reload' });
-        if (response.ok) {
-          await cache.put(url, response.clone());
-        }
-      } catch (error) {
-        console.warn('[SW] Không cache được:', url, error);
-      }
-    })
-  );
+async function cacheOne(cache, url) {
+  try {
+    const response = await fetch(url, { cache: 'reload' });
+    if (response && response.ok) await cache.put(url, response.clone());
+  } catch (error) {
+    console.warn('[SW] Bỏ qua file chưa cache được:', url, error);
+  }
 }
 
 self.addEventListener('install', event => {
-  event.waitUntil(precacheSafely());
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.allSettled(APP_SHELL.map(url => cacheOne(cache, url)));
+  })());
+
   self.skipWaiting();
 });
 
@@ -42,37 +38,35 @@ self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
 
-    await Promise.all(
-      keys.map(key => {
-        const isOurOldCache =
-          (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) ||
-          LEGACY_PREFIXES.some(prefix => key.startsWith(prefix));
+    await Promise.all(keys.map(key => {
+      const remove =
+        (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) ||
+        OLD_PREFIXES.some(prefix => key.startsWith(prefix));
 
-        return isOurOldCache ? caches.delete(key) : Promise.resolve(false);
-      })
-    );
+      return remove ? caches.delete(key) : Promise.resolve(false);
+    }));
 
     await self.clients.claim();
   })());
 });
 
-async function networkFirstNavigation(request) {
+async function networkFirst(request) {
   const cache = await caches.open(CACHE_NAME);
 
   try {
-    const fresh = await fetch(request, { cache: 'no-store' });
+    const response = await fetch(request, { cache: 'no-store' });
 
-    if (fresh && fresh.ok) {
-      await cache.put(request, fresh.clone());
-      return fresh;
+    if (response && response.ok) {
+      await cache.put(request, response.clone());
+      return response;
     }
 
-    throw new Error('HTTP ' + (fresh ? fresh.status : 'NO_RESPONSE'));
-  } catch (error) {
+    throw new Error('HTTP_' + (response ? response.status : 'NO_RESPONSE'));
+  } catch (_) {
     return (
-      await cache.match(request) ||
-      await cache.match(new URL('./index.html', BASE_URL).toString()) ||
-      await cache.match(new URL('./', BASE_URL).toString()) ||
+      await cache.match(request, { ignoreSearch: true }) ||
+      await cache.match(new URL('./index.html', BASE_URL).toString(), { ignoreSearch: true }) ||
+      await cache.match(new URL('./', BASE_URL).toString(), { ignoreSearch: true }) ||
       Response.error()
     );
   }
@@ -80,40 +74,35 @@ async function networkFirstNavigation(request) {
 
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request, { ignoreVary: true });
+  const cached = await cache.match(request, { ignoreVary: true, ignoreSearch: true });
 
-  const networkPromise = fetch(request)
+  const network = fetch(request)
     .then(async response => {
-      if (response && response.ok) {
-        await cache.put(request, response.clone());
-      }
+      if (response && response.ok) await cache.put(request, response.clone());
       return response;
     })
     .catch(() => null);
 
-  return cached || (await networkPromise) || Response.error();
+  return cached || (await network) || Response.error();
 }
 
 self.addEventListener('fetch', event => {
   const request = event.request;
-
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
 
-  // Chỉ quản lý tài nguyên GitHub Pages cùng origin.
-  // Không chặn và không cache Google Apps Script trong iframe.
+  // Không can thiệp tài nguyên Google Apps Script trong iframe.
   if (url.origin !== self.location.origin) return;
   if (!url.pathname.startsWith(BASE_URL.pathname)) return;
 
-  if (request.mode === 'navigate') {
-    event.respondWith(networkFirstNavigation(request));
-    return;
-  }
-
-  // sw.js luôn lấy mới để tránh mắc kẹt ở phiên bản cũ.
-  if (url.pathname.endsWith('/sw.js')) {
-    event.respondWith(fetch(request, { cache: 'no-store' }));
+  if (
+    request.mode === 'navigate' ||
+    url.pathname.endsWith('/index.html') ||
+    url.pathname.endsWith('/manifest.webmanifest') ||
+    url.pathname.endsWith('/sw.js')
+  ) {
+    event.respondWith(networkFirst(request));
     return;
   }
 
@@ -121,7 +110,5 @@ self.addEventListener('fetch', event => {
 });
 
 self.addEventListener('message', event => {
-  if (event.data === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
