@@ -2,430 +2,268 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0ea5e9">
-  <meta name="color-scheme" content="light">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
 
   <title>QUẢN LÝ KHU VỰC</title>
 
-  <link rel="manifest" href="./manifest.webmanifest?v=13">
-  <link rel="apple-touch-icon" href="./evn_logo.png">
-  <link rel="icon" href="./evn_logo.png">
-  <link rel="canonical" href="https://dlthoibinh.github.io/QLY_KHUVUC/">
+  <!-- Không giữ lại trang GitHub/iframe cũ -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self';
-                 frame-src https://*.google.com https://*.googleusercontent.com;
-                 child-src https://*.google.com https://*.googleusercontent.com;
-                 connect-src 'self' https://*.google.com https://*.googleusercontent.com;
-                 img-src 'self' data: blob: https:;
-                 style-src 'self' 'unsafe-inline';
-                 script-src 'self' 'unsafe-inline';
-                 worker-src 'self';
-                 font-src 'self' data: https:;
-                 object-src 'none';
-                 base-uri 'self';
-                 form-action 'self';
-                 block-all-mixed-content">
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.webmanifest?v=14">
+  <meta name="theme-color" content="#0ea5e9">
+
+  <link rel="apple-touch-icon" href="./icon-192-any.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192-any.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icon-512-any.png">
+
+  <!-- Android / iOS -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="QL Khu vực">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Tối ưu kết nối Google Apps Script -->
+  <link rel="dns-prefetch" href="//script.google.com">
+  <link rel="dns-prefetch" href="//script.googleusercontent.com">
+
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 
   <style>
-    :root {
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-right: env(safe-area-inset-right, 0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --safe-left: env(safe-area-inset-left, 0px);
-      --blue: #0ea5e9;
-      --blue-dark: #0369a1;
-      --text: #0f172a;
-      --muted: #64748b;
-      --bg: #f6f7fb;
-    }
-
     * { box-sizing: border-box; }
 
-    html, body {
+    html,
+    body {
       width: 100%;
-      height: 100%;
       min-height: 100%;
       margin: 0;
-      overflow: hidden;
-      background: var(--bg);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      -webkit-text-size-adjust: 100%;
-      overscroll-behavior: none;
     }
 
     body {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-    }
-
-    .app-shell {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      height: 100dvh;
-      overflow: hidden;
-      background: var(--bg);
-    }
-
-    #qlkvFrame {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      display: block;
-      width: 100%;
-      height: 100%;
-      border: 0;
-      background: #fff;
-      visibility: hidden;
-    }
-
-    #qlkvFrame.ready {
-      visibility: visible;
-    }
-
-    .screen {
-      position: absolute;
-      inset: 0;
-      z-index: 20;
-      display: none;
+      display: flex;
       align-items: center;
       justify-content: center;
+
+      min-height: 100vh;
+      min-height: 100dvh;
+
       padding:
-        calc(18px + var(--safe-top))
-        calc(18px + var(--safe-right))
-        calc(18px + var(--safe-bottom))
-        calc(18px + var(--safe-left));
+        calc(24px + env(safe-area-inset-top))
+        calc(24px + env(safe-area-inset-right))
+        calc(24px + env(safe-area-inset-bottom))
+        calc(24px + env(safe-area-inset-left));
+
       background:
-        radial-gradient(circle at 50% 16%, rgba(14,165,233,.18), transparent 34%),
-        linear-gradient(180deg, #f8fcff, #eef7ff);
+        radial-gradient(circle at top left, rgba(14,165,233,.24), transparent 38%),
+        radial-gradient(circle at bottom right, rgba(16,185,129,.16), transparent 38%),
+        #f3f6fb;
+
+      color: #0f172a;
+
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+
+      -webkit-text-size-adjust: 100%;
     }
 
-    .screen.show { display: flex; }
-
-    .card {
-      width: min(440px, 100%);
+    .loading-card {
+      width: min(420px, 100%);
       padding: 26px 22px;
-      border: 1px solid rgba(14,165,233,.18);
-      border-radius: 26px;
-      background: rgba(255,255,255,.97);
-      box-shadow: 0 24px 70px rgba(15,23,42,.16);
       text-align: center;
+      background: #fff;
+      border: 1px solid #dbe4ef;
+      border-radius: 24px;
+      box-shadow: 0 18px 48px rgba(15,23,42,.14);
     }
 
     .logo {
-      width: 76px;
-      height: 76px;
-      margin: 0 auto 14px;
+      width: 70px;
+      height: 70px;
+      margin: 0 auto 16px;
+      padding: 8px;
+      display: block;
       object-fit: contain;
       border-radius: 20px;
       background: #fff;
-      box-shadow: 0 12px 30px rgba(14,165,233,.18);
+      box-shadow: 0 12px 28px rgba(14,165,233,.22);
+    }
+
+    .spinner {
+      width: 42px;
+      height: 42px;
+      margin: 0 auto 17px;
+      border: 4px solid #dbeafe;
+      border-top-color: #0284c7;
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     h1 {
       margin: 0;
-      color: var(--text);
-      font-size: 23px;
-      line-height: 1.25;
-      font-weight: 900;
+      color: #0f172a;
+      font-size: 21px;
+      line-height: 1.35;
     }
 
     p {
-      margin: 10px 0 0;
-      color: var(--muted);
+      margin: 10px 0 18px;
+      color: #64748b;
       font-size: 14px;
       line-height: 1.55;
     }
 
-    .spinner {
-      width: 44px;
-      height: 44px;
-      margin: 20px auto 4px;
-      border: 4px solid rgba(14,165,233,.18);
-      border-top-color: var(--blue);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-    }
-
-    .actions {
-      display: grid;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    button, .button-link {
-      min-height: 48px;
-      border: 0;
-      border-radius: 16px;
-      padding: 0 18px;
+    .open-button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font: inherit;
-      font-size: 15px;
-      font-weight: 850;
+      min-height: 46px;
+      padding: 11px 18px;
+      border-radius: 14px;
+      background: #0284c7;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
       text-decoration: none;
-      cursor: pointer;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
 
-    .primary {
-      color: #fff;
-      background: linear-gradient(135deg, var(--blue-dark), var(--blue));
-      box-shadow: 0 12px 28px rgba(14,165,233,.25);
+    .open-button:active {
+      transform: scale(.98);
     }
 
-    .secondary {
-      color: var(--text);
-      background: #eef2f7;
-    }
-
-    .small {
+    .small-note {
       margin-top: 14px;
       color: #94a3b8;
       font-size: 12px;
-      line-height: 1.45;
-      word-break: break-word;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    @media (prefers-reduced-motion: reduce) {
-      .spinner { animation-duration: 1.8s; }
+      line-height: 1.4;
     }
   </style>
 </head>
 
 <body>
-  <main class="app-shell" aria-label="Quản lý khu vực">
-    <iframe
-      id="qlkvFrame"
-      title="QUẢN LÝ KHU VỰC"
-      allow="geolocation *; camera *; microphone *; fullscreen *; clipboard-read *; clipboard-write *; accelerometer *; gyroscope *; magnetometer *"
-      allowfullscreen
-      loading="eager">
-    </iframe>
+  <main class="loading-card">
+    <img class="logo" src="./evn_logo.png" alt="EVN">
 
-    <section id="loadingScreen" class="screen show" aria-live="polite">
-      <div class="card">
-        <img class="logo" src="./evn_logo.png" alt="EVN">
-        <h1>QUẢN LÝ KHU VỰC</h1>
-        <p id="loadingText">Đang kết nối hệ thống...</p>
-        <div class="spinner" aria-hidden="true"></div>
-        <div id="slowActions" class="actions" hidden>
-          <button class="primary" type="button" id="retryFrame">Tải lại ứng dụng</button>
-          <a class="button-link secondary" id="openDirect" href="https://script.google.com/macros/s/AKfycbwIjlt_hIXaD9chA1Xl63ErUKo54i4mB7NXTgB5BwMf0JpM5jic-Ah5OX5yP57fsD_h/exec">Mở trực tiếp để kiểm tra</a>
-        </div>
-        <div id="deploymentInfo" class="small"></div>
-      </div>
-    </section>
+    <div class="spinner" aria-hidden="true"></div>
 
-    <section id="offlineScreen" class="screen" aria-live="assertive">
-      <div class="card">
-        <img class="logo" src="./evn_logo.png" alt="EVN">
-        <h1>Không có kết nối mạng</h1>
-        <p>Ứng dụng cần Internet để đồng bộ dữ liệu khu vực.</p>
-        <div class="actions">
-          <button class="primary" type="button" id="retryOffline">Thử lại</button>
-        </div>
-      </div>
-    </section>
+    <h1>Đang mở Quản lý khu vực</h1>
+
+    <p>
+      Hệ thống đang chuyển trực tiếp đến Google Apps Script.
+      Không sử dụng iframe nên không còn lỗi
+      <b>ERR_BLOCKED_BY_RESPONSE</b>.
+    </p>
+
+    <a id="openAppButton" class="open-button" href="#">
+      Mở ứng dụng ngay
+    </a>
+
+    <div class="small-note">
+      Nếu ứng dụng chưa tự mở, anh bấm nút phía trên.
+    </div>
   </main>
 
   <script>
-    (() => {
+    (function () {
       'use strict';
 
-      const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwIjlt_hIXaD9chA1Xl63ErUKo54i4mB7NXTgB5BwMf0JpM5jic-Ah5OX5yP57fsD_h/exec';
-      const APP_BUILD = 'QLKV-PWA-2026.07.09-v13';
-      const SLOW_NOTICE_MS = 18000;
-      const LOAD_FALLBACK_MS = 5500;
+      var APP_URL = 'https://script.google.com/macros/s/AKfycbwIjlt_hIXaD9chA1Xl63ErUKo54i4mB7NXTgB5BwMf0JpM5jic-Ah5OX5yP57fsD_h/exec';
 
-      const frame = document.getElementById('qlkvFrame');
-      const loadingScreen = document.getElementById('loadingScreen');
-      const offlineScreen = document.getElementById('offlineScreen');
-      const loadingText = document.getElementById('loadingText');
-      const slowActions = document.getElementById('slowActions');
-      const deploymentInfo = document.getElementById('deploymentInfo');
-      const openDirect = document.getElementById('openDirect');
+      /*
+       * Giữ lại tham số khi APK/PWA mở từ thông báo:
+       * ?open=notify&ref_id=123
+       */
+      var targetUrl =
+        APP_URL +
+        (window.location.search || '') +
+        (window.location.hash || '');
 
-      let ready = false;
-      let bridge = '';
-      let gasUrl = '';
-      let slowTimer = 0;
-      let fallbackTimer = 0;
+      var button = document.getElementById('openAppButton');
+      button.href = targetUrl;
 
-      function validGasUrl(value) {
-        try {
-          const url = new URL(value);
-          return url.protocol === 'https:' &&
-                 url.hostname === 'script.google.com' &&
-                 /^\/macros\/s\/[^/]+\/exec$/.test(url.pathname);
-        } catch (_) {
-          return false;
-        }
+      var redirected = false;
+
+      function redirectToApp() {
+        if (redirected) return;
+
+        redirected = true;
+
+        /*
+         * Chuyển Apps Script thành trang chính.
+         * Không dùng iframe.
+         */
+        window.location.replace(targetUrl);
       }
 
-      function resolveGasUrl() {
-        const params = new URLSearchParams(location.search);
-        const supplied = params.get('gas_url') || params.get('gas');
-
-        if (supplied && validGasUrl(supplied)) {
-          localStorage.setItem('QLKV_GAS_URL', supplied);
-          params.delete('gas_url');
-          params.delete('gas');
-
-          const clean = location.pathname +
-            (params.toString() ? '?' + params.toString() : '') +
-            location.hash;
-          history.replaceState(null, '', clean);
+      function unregisterOldServiceWorkers() {
+        if (!('serviceWorker' in navigator)) {
+          return Promise.resolve();
         }
 
-        const saved = localStorage.getItem('QLKV_GAS_URL');
-        return validGasUrl(saved) ? saved : DEFAULT_GAS_URL;
-      }
-
-      function createBridgeToken() {
-        if (window.crypto && typeof crypto.randomUUID === 'function') {
-          return crypto.randomUUID();
-        }
-
-        const bytes = new Uint8Array(16);
-        if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes);
-        return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('') +
-               '-' + Date.now().toString(36);
-      }
-
-      function showOnly(target) {
-        [loadingScreen, offlineScreen].forEach(el => {
-          el.classList.toggle('show', el === target);
-        });
-      }
-
-      function deploymentId(urlValue) {
-        const match = String(urlValue).match(/\/macros\/s\/([^/]+)\/exec/);
-        return match ? match[1] : '';
-      }
-
-      function makeFrameUrl() {
-        const url = new URL(gasUrl);
-        url.searchParams.set('embed', '1');
-        url.searchParams.set('bridge', bridge);
-        url.searchParams.set('shell', APP_BUILD);
-        url.searchParams.set('_ts', String(Date.now()));
-        return url.toString();
-      }
-
-      function clearTimers() {
-        clearTimeout(slowTimer);
-        clearTimeout(fallbackTimer);
-      }
-
-      function markReady(source) {
-        if (ready) return;
-        ready = true;
-        clearTimers();
-        frame.classList.add('ready');
-        showOnly(null);
-        console.info('[QLKV] ready:', source);
-      }
-
-      function startTimers() {
-        clearTimers();
-
-        slowTimer = setTimeout(() => {
-          if (ready || !navigator.onLine) return;
-          loadingText.textContent = 'Kết nối đang chậm. Có thể tải lại hoặc mở Web App trực tiếp để kiểm tra.';
-          slowActions.hidden = false;
-        }, SLOW_NOTICE_MS);
-      }
-
-      function loadApp() {
-        ready = false;
-        clearTimers();
-        frame.classList.remove('ready');
-        slowActions.hidden = true;
-        loadingText.textContent = 'Đang kết nối hệ thống...';
-
-        if (!navigator.onLine) {
-          showOnly(offlineScreen);
-          return;
-        }
-
-        gasUrl = resolveGasUrl();
-        bridge = createBridgeToken();
-
-        openDirect.href = gasUrl;
-        deploymentInfo.textContent = 'Deployment: ' + deploymentId(gasUrl);
-
-        showOnly(loadingScreen);
-        frame.src = makeFrameUrl();
-        startTimers();
-      }
-
-      window.addEventListener('message', event => {
-        const data = event.data || {};
-
-        // Không phụ thuộc origin vì Google Apps Script có thể chạy qua nhiều lớp iframe.
-        // Mã bridge ngẫu nhiên ngăn trang khác gửi tín hiệu giả.
-        if (data.type === 'QLKV_READY' && data.bridge === bridge) {
-          markReady('bridge');
-        }
-      });
-
-      frame.addEventListener('load', () => {
-        // Apps Script có thể đặt nội dung người dùng trong iframe lồng, khiến
-        // postMessage không tới parent ở một số Android WebView. Khi tài liệu
-        // ngoài đã load xong, chờ thêm rồi mở giao diện thay vì báo chặn sai.
-        clearTimeout(fallbackTimer);
-        fallbackTimer = setTimeout(() => {
-          if (!ready && navigator.onLine) markReady('iframe-load-fallback');
-        }, LOAD_FALLBACK_MS);
-      });
-
-      window.addEventListener('online', loadApp);
-      window.addEventListener('offline', () => {
-        ready = false;
-        clearTimers();
-        frame.classList.remove('ready');
-        showOnly(offlineScreen);
-      });
-
-      document.getElementById('retryOffline').addEventListener('click', loadApp);
-      document.getElementById('retryFrame').addEventListener('click', loadApp);
-
-      if ('serviceWorker' in navigator) {
-        const swUrl = new URL('./sw.js?v=13', location.href);
-        navigator.serviceWorker
-          .register(swUrl, { scope: './', updateViaCache: 'none' })
-          .then(async registration => {
-            await registration.update();
-
-            if (registration.waiting) {
-              registration.waiting.postMessage('SKIP_WAITING');
-            }
+        return navigator.serviceWorker
+          .getRegistrations()
+          .then(function (registrations) {
+            return Promise.all(
+              registrations.map(function (registration) {
+                return registration.unregister().catch(function () {
+                  return false;
+                });
+              })
+            );
           })
-          .catch(error => console.warn('[QLKV] Service Worker:', error));
-
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (!sessionStorage.getItem('QLKV_SW_RELOADED_V13')) {
-            sessionStorage.setItem('QLKV_SW_RELOADED_V13', '1');
-            location.reload();
-          }
-        });
+          .catch(function () {
+            return null;
+          });
       }
 
-      loadApp();
+      function deleteOldCaches() {
+        if (!('caches' in window)) {
+          return Promise.resolve();
+        }
+
+        return caches.keys()
+          .then(function (cacheNames) {
+            return Promise.all(
+              cacheNames.map(function (cacheName) {
+                return caches.delete(cacheName).catch(function () {
+                  return false;
+                });
+              })
+            );
+          })
+          .catch(function () {
+            return null;
+          });
+      }
+
+      Promise.all([
+        unregisterOldServiceWorkers(),
+        deleteOldCaches()
+      ]).then(
+        redirectToApp,
+        redirectToApp
+      );
+
+      // Dự phòng WebView cũ xử lý Promise chậm.
+      window.setTimeout(redirectToApp, 1200);
     })();
   </script>
 </body>
