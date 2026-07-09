@@ -5,7 +5,7 @@
   "description": "Ứng dụng quản lý khu vực Điện lực Thới Bình",
   "lang": "vi",
   "dir": "ltr",
-  "start_url": "./index.html?v=13",
+  "start_url": "./index.html?v=14",
   "scope": "./",
   "display": "standalone",
   "display_override": [
