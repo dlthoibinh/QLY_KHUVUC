@@ -1,57 +1,55 @@
-'use strict';
+const BASE = new URL('./', self.location).pathname;
+const CACHE = 'crew-pwa-v10';
 
-/*
- * Service Worker tự dọn và tự hủy.
- * QLKV v14 chuyển thẳng tới Google Apps Script, không dùng iframe.
- */
-
-const OLD_CACHE_PREFIXES = [
-  'crew-pwa-',
-  'qlkv-pwa-',
-  'qlkv-shell-'
+const STATIC_ASSETS = [
+  BASE,
+  BASE + 'index.html',
+  BASE + 'manifest.webmanifest',
+  BASE + 'icon-192-any.png',
+  BASE + 'icon-512-any.png',
+  BASE + 'icon-192-maskable.png',
+  BASE + 'icon-512-maskable.png',
+  BASE + 'evn_logo.png'
 ];
 
-self.addEventListener('install', function () {
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC_ASSETS)));
   self.skipWaiting();
 });
 
-self.addEventListener('activate', function (event) {
-  event.waitUntil(
-    (async function () {
-      try {
-        const cacheNames = await caches.keys();
-
-        await Promise.all(
-          cacheNames
-            .filter(function (cacheName) {
-              return OLD_CACHE_PREFIXES.some(function (prefix) {
-                return cacheName.startsWith(prefix);
-              });
-            })
-            .map(function (cacheName) {
-              return caches.delete(cacheName);
-            })
-        );
-
-        await self.registration.unregister();
-
-        const clientList = await self.clients.matchAll({
-          type: 'window',
-          includeUncontrolled: true
-        });
-
-        clientList.forEach(function (client) {
-          client.navigate(client.url);
-        });
-      } catch (error) {
-        console.error('Không thể dọn Service Worker cũ:', error);
-      }
-    })()
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.map(k => k !== CACHE ? caches.delete(k) : 0)))
   );
+  self.clients.claim();
 });
 
-/*
- * Không chặn request.
- * Không dùng event.respondWith().
- */
-self.addEventListener('fetch', function () {});
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin || !url.pathname.startsWith(BASE)) return;
+
+  if (req.mode === 'navigate') {
+    e.respondWith((async () => {
+      try {
+        const fresh = await fetch(req);
+        const cache = await caches.open(CACHE);
+        cache.put(req, fresh.clone());
+        return fresh;
+      } catch {
+        const cache = await caches.open(CACHE);
+        return (await cache.match(BASE + 'index.html')) || Response.error();
+      }
+    })());
+    return;
+  }
+
+  e.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    const cached = await cache.match(req, { ignoreVary: true });
+    if (cached) return cached;
+    const res = await fetch(req);
+    if (res.ok && req.method === 'GET') cache.put(req, res.clone());
+    return res;
+  })());
+});
